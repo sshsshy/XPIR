@@ -34,8 +34,19 @@ PIRQueryGenerator_internal::PIRQueryGenerator_internal(PIRParameters& pirParamet
  * Generates asyncronously queries for each files.
  * Makes encrypted of 0 or 1.
  **/
+uint64_t simple_power(uint32_t d, uint32_t n){
+	uint64_t out = n;
+	for(int i=1;i<d;i++)
+		out*=n;	
+	return out;	
+}	
+
 void PIRQueryGenerator_internal::generateQuery() 
 {
+  clock_t gq_start, gq_end; 
+	gq_start = clock();
+	size_t single_encrypted_val_size=0, size_se =0;
+
   double start = omp_get_wtime();
 	coord = new unsigned int[pirParams.d]();
 
@@ -44,15 +55,29 @@ void PIRQueryGenerator_internal::generateQuery()
 	{
 		for (unsigned int i = 0 ; i < pirParams.n[j] ; i++) 
 		{
-			if (i == coord[j]) queryBuffer.push(cryptoMethod.encrypt(1, j + 1 ));
-			else queryBuffer.push(cryptoMethod.encrypt(0, j + 1));
+
+			if(j==0&&i==0){
+				char *tmp = cryptoMethod.encrypt(0, j + 1);
+				single_encrypted_val_size=strlen(tmp);
+				size_se = cryptoMethod.getPublicParameters().getQuerySizeFromRecLvl(j+1) / (8);
+				//std::cout << "ssasy_size: PIRQueryGenerator_internal: Generated a " << single_encrypted_val_size << " char(byte)-sized element query" << std::endl;
+				std::cout << "measure_size_single:PIRQueryGenerator_internal:single_query_size:"<< size_se <<":bytes" << std::endl;
+				std::cout << "measure_size:PIRQueryGenerator_internal:single_query_size:"<< (size_t)(size_se*(size_t)(simple_power(pirParams.d, pirParams.n[0]))) <<":bytes" << std::endl;
+				}
+				if (i == coord[j]) queryBuffer.push(cryptoMethod.encrypt(1, j + 1 ));
+				else 
+					queryBuffer.push(cryptoMethod.encrypt(0, j + 1));
 	  }
-  std::cout << "PIRQueryGenerator_internal: Generated a " << pirParams.n[j] << " element query" << std::endl;
   }
   double end = omp_get_wtime();
+  gq_end = clock();
   delete[] coord;
-  
   std::cout << "PIRQueryGenerator_internal: All the queries have been generated, total time is " << end - start << " seconds" << std::endl;
+  std::cout << "consensgx1 : QueryGeneration time is " << (double)1000 * double(gq_end - gq_start)/(double)CLOCKS_PER_SEC << " ms" << std::endl; 
+  std::cout << "measure_params:PIRQueryGenerator_internal:pirParams.d :" <<pirParams.d<< ":pirParams.alpha:"<<pirParams.alpha<<":pirParams.n[]:" ;  
+	for (unsigned int i = 0 ; i < pirParams.d ; i++) 
+		std::cout << pirParams.n[i] << ", ";
+  std::cout<<std::endl << std::flush;
 }
 
 /**

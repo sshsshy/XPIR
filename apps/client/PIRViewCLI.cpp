@@ -92,6 +92,7 @@ void PIRViewCLI::writeUpdate(WriteEvent& event)
 {
 	using namespace std;
 
+	/*
 	std::cout << "\033[1GPIRReplyWriter: Remaning Bytes to write : " << event.getSizeToWrite() -  event.getWrittenSize() << "                                  \033[5G"  << "\xd"<< std::flush;
 
 	if(event.getSizeToWrite() == event.getWrittenSize())
@@ -99,6 +100,7 @@ void PIRViewCLI::writeUpdate(WriteEvent& event)
 		cout << endl << endl <<"\t## SUCESS ! ##" << endl;
 		cout << "\t   °°°°°°" << endl;
 	}
+	*/
 }
 
 /**

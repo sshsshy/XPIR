@@ -204,6 +204,7 @@ imported_database_t PIRReplyGeneratorNFL_internal::generateReplyGeneric(bool kee
   imported_database_t database_wrapper;
   uint64_t usable_memory, database_size, max_memory_per_file, max_readable_size, nbr_of_iterations;
   double start, end;
+clock_t rg_start, rg_stop;
 
   // Init database_wrapper to NULL values so that we are able to know if it has been initialized
   database_wrapper.imported_database_ptr = NULL;
@@ -253,6 +254,8 @@ imported_database_t PIRReplyGeneratorNFL_internal::generateReplyGeneric(bool kee
   }
 
   start = omp_get_wtime();
+rg_start = clock();
+
 // #pragma omp parallel for
   for (unsigned iteration = 0; iteration < nbr_of_iterations; iteration++)
   {
@@ -270,6 +273,8 @@ imported_database_t PIRReplyGeneratorNFL_internal::generateReplyGeneric(bool kee
     repliesAmount = computeReplySizeInChunks(dbhandler->getmaxFileBytesize());
     generateReply();
     end = omp_get_wtime();
+rg_stop = clock();
+
 
     if(keep_imported_data && iteration == nbr_of_iterations - 1)  // && added for Perf test but is no harmful
     {
@@ -282,10 +287,13 @@ imported_database_t PIRReplyGeneratorNFL_internal::generateReplyGeneric(bool kee
       freeInputData();
     }
   }
-
+	std::cout<<"nbr_of_iterations:"<<nbr_of_iterations<<std::endl;
+	std::cout<<"measure_reply_size:"<<repliesAmount<<std::endl;
+	std::cout<<"consensgx : ReplyGeneration time was " << (double) 1000 * double(rg_stop - rg_start) / double(CLOCKS_PER_SEC)<< " ms" <<endl<<std::flush;
 	std::cout<<"PIRReplyGeneratorNFL_internal: Total process time " << end - start << " seconds" << std::endl;
 	std::cout<<"PIRReplyGeneratorNFL_internal: DB processing throughput " << 8*database_size/(end - start) << "bps" << std::endl;
 	std::cout<<"PIRReplyGeneratorNFL_internal: Client cleartext reception throughput  " << 8*dbhandler->getmaxFileBytesize()/(end - start) << "bps" << std::endl;
+
   freeQueries();
 
   return database_wrapper;
@@ -301,6 +309,7 @@ void PIRReplyGeneratorNFL_internal::generateReplyGenericFromData(const imported_
   currentMaxNbPolys = database.polysPerElement;
 	boost::mutex::scoped_lock l(mutex);
   double start = omp_get_wtime();
+  clock_t rg_start = clock();
   repliesAmount = computeReplySizeInChunks(database.beforeImportElementBytesize);
   generateReply();
 #else
@@ -312,10 +321,11 @@ void PIRReplyGeneratorNFL_internal::generateReplyGenericFromData(const imported_
   max_readable_size = min(max_readable_size, database.beforeImportElementBytesize);
   // Given readable size we get how many iterations we need
   nbr_of_iterations = ceil((double)database.beforeImportElementBytesize/max_readable_size);
-
+  std::cout<<"nbr_of_iterations:"<<nbr_of_iterations<<std::endl;
 
   boost::mutex::scoped_lock l(mutex);
   double start = omp_get_wtime();
+  clock_t rg_start = clock();
   for (unsigned iteration = 0; iteration < nbr_of_iterations; iteration++)
   {
 
@@ -326,8 +336,11 @@ void PIRReplyGeneratorNFL_internal::generateReplyGenericFromData(const imported_
   }
   freeInputData();
 #endif
+	clock_t rg_stop = clock();
   double end = omp_get_wtime();
-	std::cout<<"PIRReplyGeneratorNFL_internal: Total process time " << end - start << " seconds" << std::endl;
+	std::cout<<"measure_reply_size:"<<repliesAmount<<std::endl;
+	std::cout<<"consensgx : ReplyGeneration time was " << (double) 1000 * double(rg_stop - rg_start) / double(CLOCKS_PER_SEC)<< " ms" <<endl;
+	std::cout<<"PIRReplyGeneratorNFL_internal: Total process time " << end - start << " seconds" << std::endl << std::flush;
 	std::cout<<"PIRReplyGeneratorNFL_internal: DB processing throughput " << 8*dbhandler->getmaxFileBytesize()*dbhandler->getNbStream()/(end - start) << "bps" << std::endl;
 	std::cout<<"PIRReplyGeneratorNFL_internal: Client cleartext reception throughput  " << 8*dbhandler->getmaxFileBytesize()/(end - start) << "bps" << std::endl;
   freeQueries();
@@ -353,7 +366,6 @@ void PIRReplyGeneratorNFL_internal::generateReply()
   // Allocate memory for the reply array
   if (repliesArray != NULL) freeResult();
   repliesArray = (char**)calloc(repliesAmount,sizeof(char*)); 
-
 
   // Start global timers
   double start = omp_get_wtime();

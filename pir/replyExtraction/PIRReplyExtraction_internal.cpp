@@ -40,15 +40,18 @@ PIRReplyExtraction_internal::PIRReplyExtraction_internal(PIRParameters& param_, 
  **/
 void PIRReplyExtraction_internal::extractReply(int aggregated_maxFileSize, shared_queue<char*>* clearChunks)
 {
+  uint64_t response_size=0;
   unsigned long ciphertext_nbr = 1;
   unsigned int data_size, data_size2b;
   char *data, *in_data, *in_data_2b;
   double start = omp_get_wtime();
+	clock_t er_start, er_stop;
   uint64_t total_ciphertext_nbr= 0;
-
+	er_start=clock();
   for (unsigned int rec_lvl = pirParams.d ; rec_lvl >= 1 ; rec_lvl--)
   {
     ciphertext_nbr = ceil(static_cast<float>(aggregated_maxFileSize) / static_cast<float>(cryptoMethod.getPublicParameters().getAbsorptionBitsize(0)/GlobalConstant::kBitsPerByte));
+    std::cout<<"consensgx:PIRReplyExtraction_internal: First layer ciphertext_nbr="<<ciphertext_nbr<<", AbsorptionBitsize = "<<cryptoMethod.getPublicParameters().getAbsorptionBitsize(0)<<", aggregated_maxFileSize="<<aggregated_maxFileSize<<std::endl;
 #ifdef DEBUG
 	std::cout<<"PIRReplyExtraction_internal: First layer ciphertext_nbr="<<ciphertext_nbr<<std::endl;
 #endif
@@ -58,7 +61,7 @@ void PIRReplyExtraction_internal::extractReply(int aggregated_maxFileSize, share
       ciphertext_nbr =  ceil(float(ciphertext_nbr) * float(cryptoMethod.getPublicParameters().getCiphBitsizeFromRecLvl(i)/GlobalConstant::kBitsPerByte) / float(cryptoMethod.getPublicParameters().getAbsorptionBitsize(i)/GlobalConstant::kBitsPerByte));
     }
     total_ciphertext_nbr += ciphertext_nbr;
-
+    std::cout<<"consensgx: Total_ciphertext_nbr = "<<total_ciphertext_nbr<<std::endl;
 #ifdef DEBUG
 	std::cout<<"PIRReplyextraction: Last layer ciphertext_nbr="<<ciphertext_nbr<<std::endl;
 #endif
@@ -67,6 +70,7 @@ void PIRReplyExtraction_internal::extractReply(int aggregated_maxFileSize, share
 
     data_size  = cryptoMethod.getPublicParameters().getCiphBitsizeFromRecLvl(rec_lvl) / GlobalConstant::kBitsPerByte ;
     data_size2b = cryptoMethod.getPublicParameters().getAbsorptionBitsize(rec_lvl-1)/GlobalConstant::kBitsPerByte;
+    std::cout<<"consensgx: data_size="<<data_size<<" data_size2b="<<data_size2b;
     if (rec_lvl > 1) in_data_2b = (char*) calloc(data_size2b * ciphertext_nbr, sizeof(char));
 
 #ifdef DEBUG
@@ -80,6 +84,7 @@ void PIRReplyExtraction_internal::extractReply(int aggregated_maxFileSize, share
       if (rec_lvl == pirParams.d && j == 0 ) 
       { 
         cout << "PIRReplyExtraction_internal: Starting reply extraction..." << endl;
+
       }
       out_data = cryptoMethod.decrypt(data, rec_lvl, data_size, data_size2b);
      if (rec_lvl > 1) {
@@ -101,8 +106,13 @@ void PIRReplyExtraction_internal::extractReply(int aggregated_maxFileSize, share
     if (rec_lvl < pirParams.d) free(in_data);
     in_data = in_data_2b;
   }
+	er_stop = clock();
+  response_size = data_size * total_ciphertext_nbr;
+  std::cout<<"measure_response_size:"<<response_size<<std::endl;
   cout << "PIRReplyExtraction_internal: Reply extraction finished, " << total_ciphertext_nbr <<
-    " reply elements decrypted in " << omp_get_wtime() - start << " seconds" << endl;
+    " reply elements decrypted in " << omp_get_wtime() - start << " seconds" << std::endl;
+  cout << "consensgx2 : ReplyExtraction finished, time taken was " << (double)1000 * (double)(er_stop - er_start) /(double)(CLOCKS_PER_SEC) << " ms" << std::endl;
+    cout << "PIRReplyExtraction_internal: data_size=" << data_size << " data_size2b=" << data_size2b << std::endl << std::flush;
 }
 
 

@@ -21,6 +21,7 @@
 static const std::string DEFAULT_IP("127.0.0.1");
 static const int DEFAULT_PORT = 1234;
 static const bool DEFAULT_AUTOCHOICE = false;
+static const int DEFAULT_BATCHSIZE = 1;
 
 // Optimizer constants
 static const int DEFAULT_SECURITY = 80;
@@ -66,6 +67,10 @@ void defineClientOptions(ClientParams* paramsPtr, po::options_description* odptr
      "PIR server port")
     
     ("autochoice,c", 
+     "Auto-choose the first file")
+
+    ("batchqueries,b",
+	po::value<int>(&paramsPtr->batchSize)->default_value(DEFAULT_BATCHSIZE), 
      "Auto-choose the first file")
     
     ("dry-run", 
@@ -400,16 +405,23 @@ int main(int argc, char** argv)
   
   double start = omp_get_wtime();
   
-  
+  clock_t pq_start, pq_stop, pr_start, pr_stop;
+	pq_start = clock();
   /* Asynchronously generate and send the request
      separately in two threads*/
   client.startProcessQuery();
+	pq_stop = clock();
   /* Receive asynchronously the response from the server and
      asynchronously writes it */
+	pr_start = clock();
   client.startProcessResult();
+	pr_stop = clock();
+
 
   client.joinAllThreads();
   double end = omp_get_wtime();
+//cout<<"ssasy : ProcessQuery time taken was " << (double) 1000 * double(pq_stop - pq_start) / double(CLOCKS_PER_SEC)<< "ms" <<endl;
+//cout<<"ssasy : ProcessResult time taken was " << (double) 1000 * double(pr_stop - pq_start) / double(CLOCKS_PER_SEC)<< "ms" <<endl;
   cout << "CLI: Query RTT was " << end-start << " seconds" << endl;
   cout << "CLI: Exiting..." << endl;
 

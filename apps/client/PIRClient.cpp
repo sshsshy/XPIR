@@ -15,10 +15,10 @@
  *  along with XPIR.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+
 #include "PIRClient.hpp"
 //Use this to limit the upload speed to UPLOAD_LIMIT bits per second
 //#define UPLOAD_LIMIT 100000000UL
-
 
 PIRClientSimple::PIRClientSimple(boost::asio::io_service& ios, ClientParams params, FixedVars vars):
 	socket_up(ios),
@@ -301,7 +301,10 @@ void PIRClientSimple::startProcessQuery()
 
   if(no_pipeline_mode) {
     std::cout << "PIRClient: Calling query generation and upload without pipelining" << std::endl;
-    queryGen.generateQuery(); 
+	
+	gq_start = clock();
+    queryGen.generateQuery();
+	gq_stop = clock(); 
   } else {
     queryGen.startGenerateQuery();
   }
@@ -365,8 +368,16 @@ void PIRClientSimple::startProcessResult()
   {
     std::cout << "PIRClient: Calling reply download, extraction and writting without pipelining" << std::endl;
     downloadWorker(*replyExt);
+
+	er_start = clock();
     replyExt->extractReply(catalog.getMaxFileSize()*pirParams.alpha, replyWriter.getClearDataQueue());
-    // Tell reply writer we finished the extraction
+	er_stop = clock();
+	
+	tclock = gq_stop - gq_start;	
+	std::cout<<"GenQuery Time = %f ms"<< tclock/CLOCKS_PER_SEC <<endl;   
+	tclock = er_stop - er_start;	
+	std::cout<<"ExtractReply Time = %f ms"<< tclock/CLOCKS_PER_SEC <<endl;   
+ // Tell reply writer we finished the extraction
     replyWriter.writeAggregatedFileSecurely(chosenElement, catalog);
   }
   else 

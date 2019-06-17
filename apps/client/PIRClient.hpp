@@ -61,6 +61,9 @@ struct ClientParams
 
   // Dry-run mode
   bool dryrunmode;
+
+  // Batch-query
+  int batchSize;
 };
 
 class PIRClientSimple
@@ -112,6 +115,8 @@ class PIRClientSimple
     void setChosenElement(uint64_t choice);
     void joinAllThreads();
     void no_pipeline(bool b);
+
+	clock_t gq_start, gq_stop, er_start, er_stop, tclock;
 
     /*Add Observers*/
     boost::signals2::connection addMessageListener(messageListener::slot_function_type subscriber);
